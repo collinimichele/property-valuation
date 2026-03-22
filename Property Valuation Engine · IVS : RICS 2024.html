@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Valuation Engine · IVS / RICS 2024</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════ */
+:root {
+  --gold:        #B8973A;
+  --gold-lt:     #D4B060;
+  --gold-dim:    #8A6E28;
+  --gold-pale:   #F5EED8;
+  --ink:         #111111;
+  --ink-2:       #1E1E1E;
+  --ink-3:       #2C2C2C;
+  --mid:         #6B6560;
+  --light:       #A09890;
+  --border:      #E8E2D8;
+  --border-2:    #D4CCC0;
+  --surface:     #FAFAF8;
+  --surface-2:   #F4F2EC;
+  --surface-3:   #EDE8DF;
+  --white:       #FFFFFF;
+  --green:       #1E6B3E;
+  --green-bg:    #E8F5ED;
+  --red:         #8B2A1E;
+  --red-bg:      #FAECEA;
+  --amber:       #8B5A0A;
+  --amber-bg:    #FBF2E0;
+  --blue:        #1A4070;
+  --blue-bg:     #E6EDF8;
+  --sidebar-w:   260px;
+  --header-h:    64px;
+}
+
+/* ══════════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  line-height: 1.55;
+  min-height: 100vh;
+}
+h1,h2,h3,h4,h5 { font-family: 'Cormorant Garamond', Georgia, serif; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+input, select, button { font-family: 'Inter', sans-serif; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-2); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+
+/* ══════════════════════════════════════════
+   LAYOUT — HEADER
+══════════════════════════════════════════ */
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  background: var(--ink);
+  display: flex; align-items: center;
+  padding: 0 24px;
+  z-index: 200;
+  border-bottom: 1px solid #2A2A2A;
+}
+.header-brand {
+  display: flex; align-items: baseline; gap: 14px;
+  flex: 1;
+}
+.header-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px; font-weight: 600;
+  color: var(--gold-lt);
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+.header-logo em { color: #888; font-style: normal; font-size: 16px; margin-left: 4px; }
+.header-tags {
+  display: flex; gap: 6px;
+}
+.htag {
+  font-size: 9px; font-weight: 500; letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #666;
+  border: 1px solid #333;
+  padding: 2px 8px; border-radius: 2px;
+}
+.header-actions { display: flex; gap: 8px; }
+.hbtn {
+  background: transparent;
+  border: 1px solid #333;
+  color: #888; font-size: 11px; font-weight: 500;
+  padding: 6px 14px; border-radius: 3px;
+  cursor: pointer; letter-spacing: .04em;
+  transition: all .15s;
+}
+.hbtn:hover { border-color: var(--gold-dim); color: var(--gold-lt); }
+
+/* ══════════════════════════════════════════
+   LAYOUT — SIDEBAR
+══════════════════════════════════════════ */
+.app-sidebar {
+  position: fixed;
+  top: var(--header-h); left: 0;
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--header-h));
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 100;
+  display: flex; flex-direction: column;
+}
+
+.sidebar-section {
+  padding: 20px 0 4px;
+}
+.sidebar-section-label {
+  font-size: 9px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--light);
+  padding: 0 20px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: all .12s;
+  border-left: 3px solid transparent;
+  text-decoration: none;
+  position: relative;
+}
+.nav-item:hover { background: var(--surface); }
+.nav-item.active {
+  background: var(--gold-pale);
+  border-left-color: var(--gold);
+}
+.nav-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  background: var(--surface-2);
+  flex-shrink: 0;
+  transition: all .12s;
+}
+.nav-item.active .nav-icon { background: var(--gold); }
+.nav-text {
+  flex: 1;
+}
+.nav-title {
+  font-size: 12px; font-weight: 600;
+  color: var(--ink-2);
+  display: block;
+}
+.nav-sub {
+  font-size: 10px; color: var(--light);
+  display: block; margin-top: 1px;
+}
+.nav-badge {
+  font-size: 9px; font-weight: 600;
+  background: var(--surface-3);
+  color: var(--mid);
+  padding: 2px 6px; border-radius: 2px;
+  letter-spacing: .03em;
+}
+.nav-item.active .nav-badge { background: rgba(184,151,58,0.15); color: var(--gold-dim); }
+
+.nav-item.complete .nav-icon::after {
+  content: '✓';
+  position: absolute;
+  top: 8px; right: 14px;
+  font-size: 10px; color: var(--green);
+  font-weight: 700;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 20px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-footer-text {
+  font-size: 10px; color: var(--light);
+  line-height: 1.6;
+}
+
+/* ══════════════════════════════════════════
+   LAYOUT — MAIN CONTENT
+══════════════════════════════════════════ */
+.app-main {
+  margin-left: var(--sidebar-w);
+  margin-top: var(--header-h);
+  min-height: calc(100vh - var(--header-h));
+  padding: 0;
+}
+.view { display: none; }
+.view.active { display: block; }
+
+/* ══════════════════════════════════════════
+   VIEW HEADER
+══════════════════════════════════════════ */
+.view-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 36px 20px;
+}
+.view-eyebrow {
+  font-size: 9px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--gold-dim);
+  margin-bottom: 5px;
+}
+.view-title {
+  font-size: 26px; font-weight: 600;
+  color: var(--ink); line-height: 1.2;
+  margin-bottom: 6px;
+}
+.view-desc {
+  font-size: 13px; color: var(--mid); line-height: 1.5;
+  max-width: 640px;
+}
+.view-progress {
+  display: flex; align-items: center; gap: 0;
+  margin-top: 16px;
+}
+.vp-step {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 500; color: var(--light);
+}
+.vp-step.active { color: var(--gold-dim); }
+.vp-step.done { color: var(--green); }
+.vp-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid var(--border-2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700;
+  background: var(--white);
+}
+.vp-step.active .vp-dot { border-color: var(--gold); background: var(--gold-pale); color: var(--gold-dim); }
+.vp-step.done .vp-dot { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+.vp-line {
+  width: 32px; height: 1px;
+  background: var(--border-2);
+  margin: 0 4px;
+}
+
+/* ══════════════════════════════════════════
+   CONTENT AREA
+══════════════════════════════════════════ */
+.content-area { padding: 28px 36px 40px; }
+
+/* ══════════════════════════════════════════
+   FORM CARDS
+══════════════════════════════════════════ */
+.form-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.form-card-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+}
+.form-card-icon {
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  background: var(--gold-pale);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.form-card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; font-weight: 600;
+  color: var(--ink); flex: 1;
+}
+.form-card-subtitle {
+  font-size: 11px; color: var(--light);
+  margin-top: 1px;
+}
+.form-card-tag {
+  font-size: 9px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  background: var(--gold-pale);
+  border: 1px solid rgba(184,151,58,0.3);
+  padding: 3px 8px; border-radius: 2px;
+}
+.form-card-body {
+  padding: 20px;
+}
+.form-card-body.collapsed { display: none; }
+
+/* ══════════════════════════════════════════
+   FIELD SYSTEM
+══════════════════════════════════════════ */
+.field-group { margin-bottom: 20px; }
+.field-group-title {
+  font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--light);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.field-group-title span {
+  flex: 1;
+}
+.field-group-ref {
+  font-size: 9px; font-weight: 500; letter-spacing: .06em;
+  color: var(--gold-dim);
+  background: var(--gold-pale);
+  padding: 2px 6px; border-radius: 2px;
+}
+.fields-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.fields-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.fields-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+.field { }
+.field label {
+  display: block;
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--mid);
+  margin-bottom: 5px;
+}
+.field input,
+.field select {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  color: var(--ink);
+  transition: all .12s;
+  -webkit-appearance: none;
+}
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(184,151,58,0.08);
+}
+.field input.currency { padding-left: 28px; }
+.field .input-wrap { position: relative; }
+.field .input-prefix {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px; color: var(--mid); pointer-events: none;
+}
+.field .input-suffix {
+  position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px; color: var(--light); pointer-events: none;
+}
+.field-note {
+  font-size: 10px; color: var(--light); margin-top: 4px; line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════
+   CALLOUT
+══════════════════════════════════════════ */
+.callout {
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.callout-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.callout.default { background: var(--surface-2); color: var(--mid); border-left: 3px solid var(--border-2); }
+.callout.gold { background: var(--gold-pale); color: var(--amber); border-left: 3px solid var(--gold); }
+.callout.info { background: var(--blue-bg); color: var(--blue); border-left: 3px solid var(--blue); }
+.callout.warn { background: var(--amber-bg); color: var(--amber); border-left: 3px solid var(--amber); }
+.callout.danger { background: var(--red-bg); color: var(--red); border-left: 3px solid var(--red); }
+.callout.ok { background: var(--green-bg); color: var(--green); border-left: 3px solid var(--green); }
+.callout strong { font-weight: 600; }
+
+/* ══════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: .04em;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all .15s;
+  border: 1px solid transparent;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--gold-lt);
+  border-color: var(--ink-3);
+}
+.btn-primary:hover { background: var(--ink-3); }
+.btn-gold {
+  background: var(--gold);
+  color: var(--white);
+  border-color: var(--gold-dim);
+}
+.btn-gold:hover { background: var(--gold-dim); }
+.btn-outline {
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--border-2);
+}
+.btn-outline:hover { background: var(--surface-2); }
+.btn-sm { padding: 7px 14px; font-size: 11px; }
+.btn-row { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+
+/* ══════════════════════════════════════════
+   KPI GRID
+══════════════════════════════════════════ */
+.kpi-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+.kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+.kpi-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 20px; }
+.kpi {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+}
+.kpi::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--border);
+}
+.kpi.green::before { background: var(--green); }
+.kpi.amber::before { background: var(--amber); }
+.kpi.red::before { background: var(--red); }
+.kpi.gold::before { background: var(--gold); }
+.kpi-label {
+  font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--light);
+  margin-bottom: 7px;
+}
+.kpi-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px; font-weight: 700;
+  color: var(--ink); line-height: 1;
+  margin-bottom: 5px;
+}
+.kpi.green .kpi-value { color: var(--green); }
+.kpi.amber .kpi-value { color: var(--amber); }
+.kpi.red .kpi-value { color: var(--red); }
+.kpi-sub { font-size: 11px; color: var(--light); }
+.kpi-delta {
+  position: absolute; top: 14px; right: 14px;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 6px; border-radius: 3px;
+}
+.kpi-delta.up { background: var(--green-bg); color: var(--green); }
+.kpi-delta.down { background: var(--red-bg); color: var(--red); }
+.kpi-delta.mid { background: var(--amber-bg); color: var(--amber); }
+
+/* ══════════════════════════════════════════
+   ANALYSIS CARD
+══════════════════════════════════════════ */
+.a-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.a-card-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface);
+}
+.a-card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px; font-weight: 600;
+  color: var(--ink); flex: 1;
+}
+.a-card-ref {
+  font-size: 9px; font-weight: 600; letter-spacing: .08em;
+  color: var(--gold-dim); background: var(--gold-pale);
+  border: 1px solid rgba(184,151,58,0.25);
+  padding: 2px 7px; border-radius: 2px;
+  text-transform: uppercase;
+}
+.a-card-body { padding: 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* ══════════════════════════════════════════
+   TABLE
+══════════════════════════════════════════ */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th {
+  font-size: 9px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--light);
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  text-align: right; background: var(--surface);
+}
+.data-table th:first-child { text-align: left; }
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: right; vertical-align: middle;
+}
+.data-table td:first-child { text-align: left; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface); }
+.data-table .total-row td { font-weight: 600; background: var(--surface-2); border-top: 1.5px solid var(--border-2); }
+.data-table .highlight-row td { background: var(--gold-pale); }
+.td-neg { color: var(--red); }
+.td-pos { color: var(--green); font-weight: 600; }
+.td-label { color: var(--mid); }
+
+/* ══════════════════════════════════════════
+   METHOD COMPARISON STRIP
+══════════════════════════════════════════ */
+.method-strip {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: 0;
+  border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; margin-bottom: 16px;
+}
+.method-tile {
+  padding: 16px 14px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+  background: var(--white);
+  transition: background .12s;
+}
+.method-tile:last-child { border-right: none; }
+.method-tile.omv-tile { background: var(--surface-2); }
+.method-tile:hover { background: var(--surface); }
+.mt-icon { font-size: 20px; margin-bottom: 6px; }
+.mt-tag {
+  font-size: 8px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase;
+  display: inline-block; margin-bottom: 8px;
+  padding: 2px 6px; border-radius: 2px;
+}
+.mt-tag.mca { background: var(--green-bg); color: var(--green); }
+.mt-tag.cap { background: var(--blue-bg); color: var(--blue); }
+.mt-tag.dcf { background: var(--gold-pale); color: var(--gold-dim); }
+.mt-tag.cost { background: var(--surface-3); color: var(--mid); }
+.mt-tag.omv { background: var(--ink); color: var(--gold-lt); }
+.mt-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px; font-weight: 700;
+  color: var(--ink); line-height: 1;
+  margin-bottom: 4px;
+}
+.mt-sub { font-size: 10px; color: var(--light); }
+.mt-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.mt-bar { height: 100%; border-radius: 2px; transition: width .5s; }
+.bar-mca { background: var(--green); }
+.bar-cap { background: var(--blue); }
+.bar-dcf { background: var(--gold); }
+.bar-cost { background: var(--light); }
+.bar-omv { background: var(--ink); }
+
+/* ══════════════════════════════════════════
+   SCENARIO SELECTOR
+══════════════════════════════════════════ */
+.scenario-selector {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 0;
+  border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; margin-bottom: 20px;
+}
+.scen-opt {
+  padding: 14px 16px;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: all .12s;
+  background: var(--white);
+}
+.scen-opt:last-child { border-right: none; }
+.scen-opt:hover { background: var(--surface); }
+.scen-opt.active { background: var(--surface-2); }
+.scen-opt.active.s-base { border-top: 3px solid var(--blue); }
+.scen-opt.active.s-opt { border-top: 3px solid var(--green); }
+.scen-opt.active.s-mid { border-top: 3px solid var(--amber); }
+.scen-opt.active.s-bad { border-top: 3px solid var(--red); }
+.so-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 6px; vertical-align: middle;
+}
+.so-name { font-size: 12px; font-weight: 600; color: var(--ink); }
+.so-sub { font-size: 11px; color: var(--light); margin-top: 3px; }
+.so-kpis { display: flex; gap: 12px; margin-top: 8px; }
+.so-kpi { font-size: 10px; color: var(--mid); }
+.so-kpi strong { font-weight: 600; color: var(--ink-2); }
+
+/* ══════════════════════════════════════════
+   SENSITIVITY TABLE
+══════════════════════════════════════════ */
+.sens-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.sens-table th {
+  padding: 7px 10px; font-size: 9px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  background: var(--surface-2); color: var(--light);
+  text-align: center; border: 1px solid var(--border);
+}
+.sens-table td {
+  padding: 7px 10px; text-align: center;
+  border: 1px solid var(--border);
+  font-weight: 600; font-size: 11px;
+  transition: background .1s;
+}
+.sens-cell-green { background: var(--green-bg); color: var(--green); }
+.sens-cell-amber { background: var(--amber-bg); color: var(--amber); }
+.sens-cell-red { background: var(--red-bg); color: var(--red); }
+.sens-row-label { background: var(--surface-2); color: var(--mid); font-weight: 600; font-size: 10px; text-align: right; }
+
+/* ══════════════════════════════════════════
+   AUDIENCE TABS
+══════════════════════════════════════════ */
+.aud-tabs {
+  display: flex; gap: 0;
+  border-bottom: 1.5px solid var(--border);
+  margin-bottom: 24px;
+}
+.aud-tab {
+  padding: 12px 22px;
+  font-size: 12px; font-weight: 600;
+  color: var(--light);
+  border: none; background: none;
+  cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  margin-bottom: -1.5px;
+  transition: all .15s;
+  letter-spacing: .02em;
+  display: flex; align-items: center; gap: 6px;
+}
+.aud-tab:hover { color: var(--ink); }
+.aud-tab.active { color: var(--gold-dim); border-bottom-color: var(--gold); }
+.aud-panel { display: none; }
+.aud-panel.active { display: block; }
+
+/* ══════════════════════════════════════════
+   CHECK LIST
+══════════════════════════════════════════ */
+.checklist-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.checklist-row:last-child { border-bottom: none; }
+.cl-label { color: var(--mid); }
+.cl-val { font-weight: 600; color: var(--ink); }
+.cl-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .06em;
+  padding: 2px 8px; border-radius: 2px;
+  margin-left: 6px;
+}
+.cl-ok { background: var(--green-bg); color: var(--green); }
+.cl-warn { background: var(--amber-bg); color: var(--amber); }
+.cl-fail { background: var(--red-bg); color: var(--red); }
+.cl-info { background: var(--blue-bg); color: var(--blue); }
+
+/* ══════════════════════════════════════════
+   PAM RADAR WRAPPER
+══════════════════════════════════════════ */
+.pam-block {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px;
+}
+.pam-row { display: flex; align-items: center; gap: 12px; }
+.pam-label { font-size: 11px; color: var(--mid); min-width: 190px; }
+.pam-track {
+  flex: 1; height: 6px;
+  background: var(--border); border-radius: 3px; overflow: hidden;
+}
+.pam-fill { height: 100%; border-radius: 3px; transition: width .4s; background: var(--gold); }
+.pam-score { font-size: 12px; font-weight: 700; min-width: 28px; text-align: right; color: var(--ink); }
+.pam-result {
+  text-align: center; padding: 14px;
+  border-top: 1px solid var(--border); margin-top: 4px;
+}
+.pam-total { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 700; color: var(--ink); }
+.pam-rating {
+  font-size: 14px; font-weight: 700; letter-spacing: .04em;
+  padding: 4px 16px; border-radius: 3px;
+  display: inline-block; margin-top: 4px;
+}
+.rating-aaa { background: var(--green-bg); color: var(--green); }
+.rating-aa { background: var(--green-bg); color: var(--green); }
+.rating-a { background: var(--blue-bg); color: var(--blue); }
+.rating-bbb { background: var(--amber-bg); color: var(--amber); }
+.rating-d { background: var(--red-bg); color: var(--red); }
+
+/* ══════════════════════════════════════════
+   CHART WRAPPER
+══════════════════════════════════════════ */
+.chart-box { position: relative; }
+
+/* ══════════════════════════════════════════
+   MISC
+══════════════════════════════════════════ */
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.text-meta { font-size: 11px; color: var(--light); }
+.text-section-hdr {
+  font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--light);
+  margin-bottom: 12px; margin-top: 20px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.inline-ref {
+  font-size: 9px; font-weight: 600; letter-spacing: .06em;
+  color: var(--gold-dim); background: var(--gold-pale);
+  border: 1px solid rgba(184,151,58,0.25);
+  padding: 1px 5px; border-radius: 2px;
+  vertical-align: middle;
+}
+.overflow-x { overflow-x: auto; }
+
+@media print {
+  .app-header, .app-sidebar { display: none !important; }
+  .app-main { margin: 0 !important; }
+  .view { display: block !important; }
+  .btn-row { display: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="header-brand">
+    <div class="header-logo">Property Valuation Engine <em>·</em></div>
+    <div class="header-tags">
+      <span class="htag">IVS 2022</span>
+      <span class="htag">RICS Red Book</span>
+      <span class="htag">Codice Val. Imm. IV</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="hbtn" onclick="runAll();showView('view-analysis')">▶ Calcola</button>
+    <button class="hbtn" onclick="window.print()">Stampa</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<aside class="app-sidebar">
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Inserimento Dati</div>
+    <div class="nav-item active" onclick="showView('view-asset')" id="nav-asset">
+      <div class="nav-icon">🏢</div>
+      <div class="nav-text">
+        <span class="nav-title">Asset &amp; Mercato</span>
+        <span class="nav-sub">Anagrafica, superfici, MCA</span>
+      </div>
+      <span class="nav-badge">1/5</span>
+    </div>
+    <div class="nav-item" onclick="showView('view-income')" id="nav-income">
+      <div class="nav-icon">💷</div>
+      <div class="nav-text">
+        <span class="nav-title">Bilancio Estimativo</span>
+        <span class="nav-sub">Ricavi, costi, vacancy</span>
+      </div>
+      <span class="nav-badge">2/5</span>
+    </div>
+    <div class="nav-item" onclick="showView('view-finance')" id="nav-finance">
+      <div class="nav-icon">🏦</div>
+      <div class="nav-text">
+        <span class="nav-title">Struttura Finanziaria</span>
+        <span class="nav-sub">Mutuo, LTV, rifinanziamento</span>
+      </div>
+      <span class="nav-badge">3/5</span>
+    </div>
+    <div class="nav-item" onclick="showView('view-valuation')" id="nav-valuation">
+      <div class="nav-icon">📐</div>
+      <div class="nav-text">
+        <span class="nav-title">Parametri Valutativi</span>
+        <span class="nav-sub">DCF, exit, metodo costo</span>
+      </div>
+      <span class="nav-badge">4/5</span>
+    </div>
+    <div class="nav-item" onclick="showView('view-rating')" id="nav-rating">
+      <div class="nav-icon">⭐</div>
+      <div class="nav-text">
+        <span class="nav-title">Rating &amp; Benchmark</span>
+        <span class="nav-sub">PaM TEGOVA, alternativi</span>
+      </div>
+      <span class="nav-badge">5/5</span>
+    </div>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Output & Report</div>
+    <div class="nav-item" onclick="runAll();showView('view-analysis')" id="nav-analysis">
+      <div class="nav-icon">📊</div>
+      <div class="nav-text">
+        <span class="nav-title">Valutazione Economica</span>
+        <span class="nav-sub">4 modelli · OMV · DCF</span>
+      </div>
+    </div>
+    <div class="nav-item" onclick="runAll();showView('view-scenarios')" id="nav-scenarios">
+      <div class="nav-icon">⚡</div>
+      <div class="nav-text">
+        <span class="nav-title">Scenari &amp; Stress Test</span>
+        <span class="nav-sub">Sensitività · Rischio</span>
+      </div>
+    </div>
+    <div class="nav-item" onclick="runAll();showView('view-reports')" id="nav-reports">
+      <div class="nav-icon">📄</div>
+      <div class="nav-text">
+        <span class="nav-title">Report per Audience</span>
+        <span class="nav-sub">Investitori · Soci · Banca</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-text">
+      Standard: IVS 2022 · RICS Red Book<br>
+      Codice Val. Immobiliari IV (Tecnoborsa)<br>
+      Direttiva UE 2006/48/CE — MLV
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<main class="app-main">
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 1 — ASSET & MERCATO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-asset" class="view active">
+  <div class="view-header">
+    <div class="view-eyebrow">Inserimento dati — 1 / 5</div>
+    <div class="view-title">Asset &amp; Dati di Mercato</div>
+    <div class="view-desc">Anagrafica dell'immobile, caratteristiche fisiche e dati comparabili per il metodo MCA (Market Comparison Approach) secondo IVS Cap. 8.</div>
+  </div>
+  <div class="content-area">
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">🏢</div>
+        <div>
+          <div class="form-card-title">Identificazione dell'Immobile</div>
+          <div class="form-card-subtitle">Dati anagrafici e catastali</div>
+        </div>
+        <span class="form-card-tag">IVS §1</span>
+      </div>
+      <div class="form-card-body">
+        <div class="field-group">
+          <div class="fields-grid-2">
+            <div class="field"><label>Denominazione / Nome asset</label><input id="asset_name" value="220 Finchley Road, Camden"/></div>
+            <div class="field"><label>Indirizzo / Città</label><input id="city" value="Londra, Camden NW3"/></div>
+          </div>
+          <div class="fields-grid-4">
+            <div class="field"><label>Destinazione d'uso</label>
+              <select id="use_type">
+                <option value="hmo">HMO / Residenziale</option>
+                <option value="office">Uffici</option>
+                <option value="retail">Commerciale</option>
+                <option value="industrial">Industriale</option>
+                <option value="mixed">Misto</option>
+              </select>
+            </div>
+            <div class="field"><label>Tenure</label>
+              <select id="tenure"><option>Freehold</option><option>Leasehold</option></select>
+            </div>
+            <div class="field"><label>Anno costruzione</label><input id="year_built" type="number" value="1920"/></div>
+            <div class="field"><label>Data acquisizione</label><input type="date" id="acq_date" value="2026-02-28"/></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">📏</div>
+        <div>
+          <div class="form-card-title">Caratteristiche Fisiche</div>
+          <div class="form-card-subtitle">Superfici e stato conservativo — base per MCA e metodo del costo</div>
+        </div>
+        <span class="form-card-tag">IVS Cap. 8 / 10</span>
+      </div>
+      <div class="form-card-body">
+        <div class="field-group">
+          <div class="field-group-title"><span>Superfici</span><span class="field-group-ref">GIA / NIA secondo RICS</span></div>
+          <div class="fields-grid-4">
+            <div class="field"><label>GIA — Superf. lorda (m²)</label><input id="gia" type="number" value="455"/></div>
+            <div class="field"><label>NIA — Superf. netta (m²)</label><input id="nia" type="number" value="376"/></div>
+            <div class="field"><label>N° unità / piani</label><input id="units" type="number" value="16"/></div>
+            <div class="field"><label>Efficienza NIA/GIA (%)</label><input id="efficiency" type="number" value="83" readonly style="background:var(--surface-3);color:var(--mid)"/></div>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title"><span>Qualità &amp; Stato</span></div>
+          <div class="fields-grid-4">
+            <div class="field"><label>Stato manutenzione (1–5)</label><input id="maint" type="number" min="1" max="5" value="3"/></div>
+            <div class="field"><label>Classe energetica</label>
+              <select id="energy"><option>A+</option><option>A</option><option>B</option><option selected>C</option><option>D</option><option>E</option><option>F</option><option>G</option></select>
+            </div>
+            <div class="field"><label>N° piani fuori terra</label><input id="floors" type="number" value="5"/></div>
+            <div class="field"><label>Anno ultima ristrutturazione</label><input id="year_refurb" type="number" value="2019"/></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">🔍</div>
+        <div>
+          <div class="form-card-title">Metodo MCA — Comparabili di Mercato</div>
+          <div class="form-card-subtitle">3 transazioni recenti per cross-check del prezzo</div>
+        </div>
+        <span class="form-card-tag">IVS Cap. 8 — MCA</span>
+      </div>
+      <div class="form-card-body">
+        <div class="callout gold">
+          <span class="callout-icon">ℹ</span>
+          <div>Il <strong>Market Comparison Approach</strong> richiede almeno 3 transazioni reali comparabili nello stesso segmento di mercato. Il valore del Subject è la media ponderata dei prezzi corretti per le caratteristiche (superficie, piano, stato). Divergenza accettabile tra comparabili: &lt;5%.</div>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title"><span>Dati di mercato aggregati</span></div>
+          <div class="fields-grid-3">
+            <div class="field"><label>Prezzo medio £/m² (NIA)</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="mca_psf" type="number" value="820" class="currency"/></div>
+              <div class="field-note">Da 3+ transazioni recenti nel segmento HMO Camden</div>
+            </div>
+            <div class="field"><label>Prezzo min osservato £/m²</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="mca_psf_min" type="number" value="760" class="currency"/></div>
+            </div>
+            <div class="field"><label>Prezzo max osservato £/m²</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="mca_psf_max" type="number" value="890" class="currency"/></div>
+            </div>
+          </div>
+          <div class="fields-grid-3">
+            <div class="field"><label>Saggio capitaliz. lordo mercato (%)</label>
+              <div class="input-wrap"><input id="gross_yield_mkt" type="number" step="0.1" value="9.2"/><span class="input-suffix">%</span></div>
+            </div>
+            <div class="field"><label>Saggio capitaliz. netto mercato (%)</label>
+              <div class="input-wrap"><input id="cap_rate" type="number" step="0.1" value="8.5"/><span class="input-suffix">%</span></div>
+              <div class="field-note">Rilevato su transazioni comparabili</div>
+            </div>
+            <div class="field"><label>Trend prezzi zona (%/anno)</label>
+              <div class="input-wrap"><input id="mkt_trend" type="number" step="0.1" value="2.5"/><span class="input-suffix">%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showView('view-income')">Passo successivo: Bilancio Estimativo →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 2 — BILANCIO ESTIMATIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-income" class="view">
+  <div class="view-header">
+    <div class="view-eyebrow">Inserimento dati — 2 / 5</div>
+    <div class="view-title">Bilancio Estimativo</div>
+    <div class="view-desc">Ricavi locativi, costi di gestione e vacancy. Secondo il Codice delle Valutazioni Immobiliari IV (§3.3–3.4), il bilancio estimativo è preventivo, annuo, medio e ordinario.</div>
+  </div>
+  <div class="content-area">
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">💰</div>
+        <div>
+          <div class="form-card-title">Ricavi Locativi</div>
+          <div class="form-card-subtitle">Canoni, ERV e occupancy</div>
+        </div>
+        <span class="form-card-tag">Reddito lordo</span>
+      </div>
+      <div class="form-card-body">
+        <div class="fields-grid-3">
+          <div class="field"><label>Canone lordo annuo (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="gross_rent" type="number" value="334470" class="currency"/></div>
+            <div class="field-note">Canone contrattuale corrente</div>
+          </div>
+          <div class="field"><label>ERV — Estimated Rental Value (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="erv" type="number" value="311248" class="currency"/></div>
+            <div class="field-note">Valore locativo di mercato IVS</div>
+          </div>
+          <div class="field"><label>Canone aggiuntivo / bonus (£/anno)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="bonus_rent" type="number" value="4000" class="currency"/></div>
+            <div class="field-note">Es. incentivi Consiglio comunale</div>
+          </div>
+        </div>
+        <div class="fields-grid-3">
+          <div class="field"><label>Tasso vacancy (%)</label>
+            <div class="input-wrap"><input id="vacancy" type="number" step="0.5" value="5"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Crescita canoni (%/anno)</label>
+            <div class="input-wrap"><input id="rent_growth" type="number" step="0.1" value="2.0"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Frequenza rinnovi contrattuali (anni)</label>
+            <input id="lease_cycle" type="number" value="2"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">📋</div>
+        <div>
+          <div class="form-card-title">Costi Operativi — Bilancio Estimativo IVS</div>
+          <div class="form-card-subtitle">Tutti i costi di esercizio annuali a carico del proprietario</div>
+        </div>
+        <span class="form-card-tag">Codice §3.3–3.4</span>
+      </div>
+      <div class="form-card-body">
+        <div class="callout default">
+          <span class="callout-icon">📌</span>
+          <div>Il reddito netto da capitalizzare si ottiene sottraendo <strong>tutti</strong> i costi di gestione dal canone lordo. Il Codice (§3.4) specifica che i costi di esercizio comprendono anche le spese per interventi straordinari periodici.</div>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title"><span>Costi percentuali sul canone lordo</span></div>
+          <div class="fields-grid-3">
+            <div class="field"><label>Property management (% lordo)</label>
+              <div class="input-wrap"><input id="pm_fee" type="number" step="0.5" value="12"/><span class="input-suffix">%</span></div>
+              <div class="field-note">Leakage: utenze, vuoti, attriti operativi</div>
+            </div>
+            <div class="field"><label>Asset management fee (% lordo)</label>
+              <div class="input-wrap"><input id="am_fee" type="number" step="0.5" value="10"/><span class="input-suffix">%</span></div>
+            </div>
+            <div class="field"><label>Aliquota fiscale operativa (%)</label>
+              <div class="input-wrap"><input id="tax_rate" type="number" value="25"/><span class="input-suffix">%</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title"><span>Costi fissi annuali (£)</span></div>
+          <div class="fields-grid-3">
+            <div class="field"><label>Manutenzione ordinaria (£/anno)</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="maint_ord" type="number" value="8000" class="currency"/></div>
+            </div>
+            <div class="field"><label>Manutenzione straordinaria (£/anno)</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="maint_extra" type="number" value="4000" class="currency"/></div>
+            </div>
+            <div class="field"><label>Assicurazione (£/anno)</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="insurance" type="number" value="4000" class="currency"/></div>
+            </div>
+          </div>
+          <div class="fields-grid-3">
+            <div class="field"><label>Business rates / Tasse locali (£/anno)</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="rates_cost" type="number" value="6000" class="currency"/></div>
+            </div>
+            <div class="field"><label>HMO licence / Licenze (£/anno)</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="licence_cost" type="number" value="2000" class="currency"/></div>
+            </div>
+            <div class="field"><label>Altri costi fissi (£/anno)</label>
+              <div class="input-wrap"><span class="input-prefix">£</span><input id="other_costs" type="number" value="3000" class="currency"/></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showView('view-finance')">Passo successivo: Struttura Finanziaria →</button>
+      <button class="btn btn-outline" onclick="showView('view-asset')">← Indietro</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 3 — STRUTTURA FINANZIARIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-finance" class="view">
+  <div class="view-header">
+    <div class="view-eyebrow">Inserimento dati — 3 / 5</div>
+    <div class="view-title">Struttura Finanziaria</div>
+    <div class="view-desc">Prezzo di acquisizione, finanziamento, LTV e piano di rifinanziamento a 5 anni. Il MLV è calcolato secondo la Direttiva UE 2006/48/CE.</div>
+  </div>
+  <div class="content-area">
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">🛒</div>
+        <div>
+          <div class="form-card-title">Costi di Acquisizione</div>
+          <div class="form-card-subtitle">Prezzo, oneri accessori e equity</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="fields-grid-3">
+          <div class="field"><label>Prezzo acquisto (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="purchase" type="number" value="3300000" class="currency"/></div>
+          </div>
+          <div class="field"><label>SDLT / Imposte acquisto (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="sdlt" type="number" value="165000" class="currency"/></div>
+          </div>
+          <div class="field"><label>DD / Legali / Broker (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="dd_costs" type="number" value="51500" class="currency"/></div>
+          </div>
+        </div>
+        <div class="fields-grid-3">
+          <div class="field"><label>CAPEX / Ristrutturazione (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="capex" type="number" value="58359" class="currency"/></div>
+          </div>
+          <div class="field"><label>Hurdle rate / Tasso attualizzazione (%)</label>
+            <div class="input-wrap"><input id="disc_rate" type="number" step="0.25" value="8.0"/><span class="input-suffix">%</span></div>
+            <div class="field-note">Rendimento minimo richiesto dall'investitore</div>
+          </div>
+          <div class="field"><label>Preferred return investitori (%)</label>
+            <div class="input-wrap"><input id="pref_ret" type="number" step="0.5" value="5.0"/><span class="input-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">🏦</div>
+        <div>
+          <div class="form-card-title">Finanziamento — Primo Mutuo</div>
+          <div class="form-card-subtitle">Termini e condizioni del finanziamento originario</div>
+        </div>
+        <span class="form-card-tag">Tranche 1</span>
+      </div>
+      <div class="form-card-body">
+        <div class="fields-grid-4">
+          <div class="field"><label>LTV — Loan to Value (%)</label>
+            <div class="input-wrap"><input id="ltv1" type="number" step="1" value="60"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Tasso di interesse (%)</label>
+            <div class="input-wrap"><input id="rate1" type="number" step="0.1" value="5.96"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Durata (anni)</label>
+            <input id="dur1" type="number" value="5"/>
+          </div>
+          <div class="field"><label>Upfront fee (%)</label>
+            <div class="input-wrap"><input id="fee1" type="number" step="0.1" value="1.0"/><span class="input-suffix">%</span></div>
+          </div>
+        </div>
+        <div class="fields-grid-3">
+          <div class="field"><label>Tipo tasso</label>
+            <select id="rate1_type"><option>Fisso</option><option>Variabile</option></select>
+          </div>
+          <div class="field"><label>Tasso base di riferimento</label>
+            <div class="input-wrap"><input id="base_rate" type="number" step="0.1" value="4.0"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Margine (spread) (%)</label>
+            <div class="input-wrap"><input id="spread1" type="number" step="0.1" value="1.96"/><span class="input-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">🔄</div>
+        <div>
+          <div class="form-card-title">Rifinanziamento — Anno 5 (MLV)</div>
+          <div class="form-card-subtitle">Prospetto bancario per rifinanziamento a 5 anni secondo standard Basilea 3</div>
+        </div>
+        <span class="form-card-tag">MLV · Basilea 3</span>
+      </div>
+      <div class="form-card-body">
+        <div class="callout info">
+          <span class="callout-icon">ℹ</span>
+          <div>Il <strong>Mortgage Lending Value (MLV)</strong> è il valore prudenziale su cui la banca calcola il LTV al momento del rifinanziamento. Esclude elementi speculativi e considera solo il reddito sostenibile a lungo termine. È sistematicamente inferiore all'OMV (Dir. UE 2006/48/CE).</div>
+        </div>
+        <div class="fields-grid-4">
+          <div class="field"><label>LTV rifinanziamento (%)</label>
+            <div class="input-wrap"><input id="ltv2" type="number" step="1" value="60"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Tasso refi (%)</label>
+            <div class="input-wrap"><input id="rate2" type="number" step="0.1" value="5.96"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Durata refi (anni)</label>
+            <input id="dur2" type="number" value="5"/>
+          </div>
+          <div class="field"><label>Sconto prudenziale MLV (%)</label>
+            <div class="input-wrap"><input id="mlv_disc" type="number" value="15"/><span class="input-suffix">%</span></div>
+            <div class="field-note">Sconto su OMV per calcolo MLV</div>
+          </div>
+        </div>
+        <div class="fields-grid-3">
+          <div class="field"><label>Apprezzamento valore (%/anno)</label>
+            <div class="input-wrap"><input id="val_growth" type="number" step="0.25" value="2.0"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>DSCR minimo richiesto (x)</label>
+            <input id="dscr_min" type="number" step="0.05" value="1.25"/>
+          </div>
+          <div class="field"><label>Max LTV su MLV banca (%)</label>
+            <div class="input-wrap"><input id="ltv_mlv_max" type="number" value="80"/><span class="input-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showView('view-valuation')">Passo successivo: Parametri Valutativi →</button>
+      <button class="btn btn-outline" onclick="showView('view-income')">← Indietro</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 4 — PARAMETRI VALUTATIVI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-valuation" class="view">
+  <div class="view-header">
+    <div class="view-eyebrow">Inserimento dati — 4 / 5</div>
+    <div class="view-title">Parametri Valutativi — DCF &amp; Metodo del Costo</div>
+    <div class="view-desc">Parametri per il calcolo del valore di investimento (Worth) tramite DCF e del floor fisico tramite metodo del costo. IVS §2/§3.3 e IVS Cap. 10.</div>
+  </div>
+  <div class="content-area">
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">📈</div>
+        <div>
+          <div class="form-card-title">DCF — Discounted Cash Flow</div>
+          <div class="form-card-subtitle">Parametri per il calcolo del valore di investimento (Worth) — IVS §3.3</div>
+        </div>
+        <span class="form-card-tag">IVS §2 / §3.3</span>
+      </div>
+      <div class="form-card-body">
+        <div class="callout gold">
+          <span class="callout-icon">ℹ</span>
+          <div>Il DCF con il saggio di rendimento dell'investitore produce il <strong>Valore di Investimento (Worth)</strong>, non il Valore di Mercato (OMV). La differenza tra Worth e OMV indica se l'investimento è a sconto (Worth &gt; OMV) o a premio rispetto al mercato.</div>
+        </div>
+        <div class="fields-grid-4">
+          <div class="field"><label>Orizzonte detenzione (anni)</label>
+            <input id="horizon" type="number" value="10"/>
+          </div>
+          <div class="field"><label>Exit yield (%)</label>
+            <div class="input-wrap"><input id="exit_yield" type="number" step="0.1" value="9.5"/><span class="input-suffix">%</span></div>
+            <div class="field-note">Saggio di capitalizzazione all'exit</div>
+          </div>
+          <div class="field"><label>Ammortamento annuo (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="amort_annual" type="number" value="27787" class="currency"/></div>
+          </div>
+          <div class="field"><label>Vendita broker fee all'exit (%)</label>
+            <div class="input-wrap"><input id="exit_fee" type="number" step="0.1" value="1.5"/><span class="input-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">🧱</div>
+        <div>
+          <div class="form-card-title">Metodo del Costo — Costo di Ricostruzione Deprezzato</div>
+          <div class="form-card-subtitle">Floor fisico del valore — IVS Cap. 10</div>
+        </div>
+        <span class="form-card-tag">IVS Cap. 10</span>
+      </div>
+      <div class="form-card-body">
+        <div class="callout default">
+          <span class="callout-icon">📌</span>
+          <div>Il metodo del costo è il <strong>floor fisico</strong> del valore. Per immobili da reddito, produce tipicamente il valore più basso — confermando che il valore deriva dal flusso reddituale, non dalla struttura fisica. Usato come verifica e per scopi assicurativi.</div>
+        </div>
+        <div class="fields-grid-3">
+          <div class="field"><label>Valore del terreno edificato (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="land_val" type="number" value="800000" class="currency"/></div>
+          </div>
+          <div class="field"><label>Costo ricostruzione a nuovo (£)</label>
+            <div class="input-wrap"><span class="input-prefix">£</span><input id="rebuild_cost" type="number" value="2200000" class="currency"/></div>
+          </div>
+          <div class="field"><label>Deprezzamento fisico/funzionale (%)</label>
+            <div class="input-wrap"><input id="deprec" type="number" value="25"/><span class="input-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showView('view-rating')">Passo successivo: Rating &amp; Benchmark →</button>
+      <button class="btn btn-outline" onclick="showView('view-finance')">← Indietro</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 5 — RATING & BENCHMARK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-rating" class="view">
+  <div class="view-header">
+    <div class="view-eyebrow">Inserimento dati — 5 / 5</div>
+    <div class="view-title">Rating PaM TEGOVA &amp; Benchmark</div>
+    <div class="view-desc">Valutazione qualitativa secondo il modello Property and Market Rating (TEGOVA). Confronto con investimenti alternativi.</div>
+  </div>
+  <div class="content-area">
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">⭐</div>
+        <div>
+          <div class="form-card-title">Rating PaM TEGOVA — 4 Criteri Ponderati</div>
+          <div class="form-card-subtitle">Da AAA (95–100) a D (&lt;20) — Codice Val. Immobiliari IV Cap. 20</div>
+        </div>
+        <span class="form-card-tag">Codice Cap. 20</span>
+      </div>
+      <div class="form-card-body">
+        <div class="callout gold">
+          <span class="callout-icon">⭐</span>
+          <div>Il modello PaM TEGOVA riproduce il processo di pensiero di un valutatore esperto. I 4 criteri ponderati producono un punteggio da 0 a 100 e un rating da AAA a D. Usato dalle banche per il real estate risk assessment Basilea 2/3.</div>
+        </div>
+        <div class="fields-grid-2">
+          <div class="field"><label>1. Mercato di riferimento — peso 20% (0–100)</label>
+            <input id="pam1" type="number" min="0" max="100" value="75" oninput="liveUpdatePAM()"/>
+            <div class="field-note">Contesto socioeconomico, demografia, aspetti fiscali e legali</div>
+          </div>
+          <div class="field"><label>2. Localizzazione — peso 30% (0–100)</label>
+            <input id="pam2" type="number" min="0" max="100" value="82" oninput="liveUpdatePAM()"/>
+            <div class="field-note">Posizione, trasporti, servizi, accessibilità, ambiente urbano</div>
+          </div>
+          <div class="field"><label>3. Caratteristiche immobile — peso 20% (0–100)</label>
+            <input id="pam3" type="number" min="0" max="100" value="65" oninput="liveUpdatePAM()"/>
+            <div class="field-note">Costruzione, planimetria, sostenibilità, classe energetica</div>
+          </div>
+          <div class="field"><label>4. Qualità flusso di cassa — peso 30% (0–100)</label>
+            <input id="pam4" type="number" min="0" max="100" value="78" oninput="liveUpdatePAM()"/>
+            <div class="field-note">Qualità locatari, valore locativo, prospettive, vacancy</div>
+          </div>
+        </div>
+        <div id="pam-live-result" class="pam-block" style="border:1px solid var(--border);border-radius:6px;margin-top:16px"></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-header" onclick="toggleCard(this)">
+        <div class="form-card-icon">📊</div>
+        <div>
+          <div class="form-card-title">Benchmark — Investimenti Alternativi</div>
+          <div class="form-card-subtitle">Per il confronto nel report investitore</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="fields-grid-4">
+          <div class="field"><label>Gilt / BTP 10 anni (%)</label>
+            <div class="input-wrap"><input id="gilt" type="number" step="0.1" value="4.2"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Corporate bond IG (%)</label>
+            <div class="input-wrap"><input id="corp_bond" type="number" step="0.1" value="5.1"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Azionario storico (%)</label>
+            <div class="input-wrap"><input id="eq_mkt" type="number" step="0.1" value="7.0"/><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field"><label>Inflazione attesa (%)</label>
+            <div class="input-wrap"><input id="inflation" type="number" step="0.1" value="2.5"/><span class="input-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="runAll();showView('view-analysis')">▶ Calcola tutti i modelli e genera report</button>
+      <button class="btn btn-outline" onclick="showView('view-valuation')">← Indietro</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 6 — VALUTAZIONE ECONOMICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-analysis" class="view">
+  <div class="view-header">
+    <div class="view-eyebrow">Output — Valutazione Economica</div>
+    <div class="view-title">I 4 Modelli di Valutazione a Confronto</div>
+    <div class="view-desc">MCA · Capitalizzazione diretta · DCF/Worth · Metodo del costo. Ogni metodo risponde a una domanda diversa. La divergenza è informativa, non un errore.</div>
+  </div>
+  <div class="content-area">
+    <div class="kpi-grid-4" id="an-kpis"></div>
+    <div class="a-card">
+      <div class="a-card-header">
+        <div class="a-card-title">I 4 Metodi — Valori Stimati e Divergenze</div>
+        <span class="a-card-ref">IVS §1 · Cap.8 · Cap.9 · Cap.10</span>
+      </div>
+      <div class="a-card-body">
+        <div class="method-strip" id="method-strip"></div>
+        <div class="grid-2">
+          <div class="chart-box" style="height:220px"><canvas id="chart-methods"></canvas></div>
+          <div id="divergence-text" style="font-size:12px;color:var(--mid);line-height:1.7;padding:6px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="a-card">
+      <div class="a-card-header">
+        <div class="a-card-title">Piano DCF Annuale Dettagliato</div>
+        <span class="a-card-ref">IVS §2 — Yield Capitalization</span>
+      </div>
+      <div class="a-card-body">
+        <div class="kpi-grid-4" id="dcf-kpis" style="margin-bottom:16px"></div>
+        <div class="overflow-x"><table class="data-table"><thead><tr>
+          <th>Anno</th><th>Canone lordo</th><th>Vacancy</th><th>Ricavi netti</th><th>Costi operativi</th><th>NOI</th><th>Debt service</th><th>FCF equity</th><th>PV (FCF)</th><th>NPV cum.</th>
+        </tr></thead><tbody id="dcf-tbody"></tbody></table></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="a-card">
+        <div class="a-card-header"><div class="a-card-title">Flussi di Cassa — NOI vs FCF vs Debito</div></div>
+        <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-cf"></canvas></div></div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-header"><div class="a-card-title">NPV Cumulato</div></div>
+        <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-npv"></canvas></div></div>
+      </div>
+    </div>
+    <div class="a-card">
+      <div class="a-card-header">
+        <div class="a-card-title">Riconciliazione IVS — OMV, MLV, Worth</div>
+        <span class="a-card-ref">IVS §1 · IVS 2 §3.3 · Dir.UE 2006/48/CE</span>
+      </div>
+      <div class="a-card-body">
+        <div class="kpi-grid-3" id="recon-kpis"></div>
+        <div id="recon-table"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showView('view-scenarios')">Scenari &amp; Stress Test →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 7 — SCENARI & STRESS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-scenarios" class="view">
+  <div class="view-header">
+    <div class="view-eyebrow">Output — Scenari &amp; Stress Test</div>
+    <div class="view-title">Analisi di Sensitività e Scenari di Rischio</div>
+    <div class="view-desc">Codice Val. Immobiliari IV §4.5.3: analisi di variabili critiche su questo investimento specifico. Non teoria — numeri reali.</div>
+  </div>
+  <div class="content-area">
+    <div class="scenario-selector" id="scen-selector"></div>
+    <div class="kpi-grid-4" id="scen-kpis"></div>
+    <div class="grid-2">
+      <div class="a-card">
+        <div class="a-card-header"><div class="a-card-title">IRR Equity nei 4 Scenari</div></div>
+        <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-scen-irr"></canvas></div></div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-header"><div class="a-card-title">Ipotesi &amp; Note dello Scenario</div></div>
+        <div class="a-card-body"><div id="scen-notes" style="font-size:12px;color:var(--mid);line-height:1.7"></div></div>
+      </div>
+    </div>
+    <div class="a-card">
+      <div class="a-card-header">
+        <div class="a-card-title">Tabella di Sensitività — IRR Equity</div>
+        <span class="a-card-ref">Codice §4.5.3.1</span>
+      </div>
+      <div class="a-card-body">
+        <div class="callout default" style="margin-bottom:14px">
+          <span class="callout-icon">📊</span>
+          <div>Ogni cella = IRR equity con quella combinazione di <strong>exit yield (colonne)</strong> e <strong>crescita canoni (righe)</strong>. Scenario corrente evidenziato. Hurdle rate: <span id="hurdle-display">—</span></div>
+        </div>
+        <div class="overflow-x" id="sens-table-wrap"></div>
+      </div>
+    </div>
+    <div class="a-card">
+      <div class="a-card-header">
+        <div class="a-card-title">Variabili Critiche — Impatto sul Rendimento</div>
+        <span class="a-card-ref">Codice §4.5.3.2</span>
+      </div>
+      <div class="a-card-body">
+        <div id="stress-vars-table"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showView('view-reports')">Report per Audience →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     VIEW 8 — REPORTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="view-reports" class="view">
+  <div class="view-header">
+    <div class="view-eyebrow">Output — Report per Audience</div>
+    <div class="view-title">Lo stesso investimento, tre linguaggi diversi</div>
+    <div class="view-desc">Ogni interlocutore ha domande diverse. Ogni sezione usa i modelli di valutazione pertinenti per quel pubblico specifico.</div>
+  </div>
+  <div class="content-area">
+    <div class="aud-tabs">
+      <button class="aud-tab active" onclick="switchAud('inv',this)">👨‍💼 Investitore</button>
+      <button class="aud-tab" onclick="switchAud('soci',this)">🤝 Soci</button>
+      <button class="aud-tab" onclick="switchAud('bank',this)">🏦 Banca</button>
+      <button class="aud-tab" onclick="switchAud('method',this)">📐 Nota metodologica</button>
+    </div>
+
+    <div id="aud-inv" class="aud-panel active">
+      <div class="kpi-grid-4" id="inv-kpis"></div>
+      <div class="grid-2">
+        <div class="a-card">
+          <div class="a-card-header"><div class="a-card-title">Rendimento vs Investimenti Alternativi</div></div>
+          <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-alt"></canvas></div></div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-header"><div class="a-card-title">La tesi dell'investimento fisico</div></div>
+          <div class="a-card-body"><div id="inv-thesis" style="font-size:12px;line-height:1.8;color:var(--ink-2)"></div></div>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-header"><div class="a-card-title">Piano di Rendimento — Cumulato nel Tempo</div></div>
+        <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-inv-timeline"></canvas></div></div>
+      </div>
+    </div>
+
+    <div id="aud-soci" class="aud-panel">
+      <div class="kpi-grid-4" id="soci-kpis"></div>
+      <div class="grid-2">
+        <div class="a-card">
+          <div class="a-card-header"><div class="a-card-title">Valore Portfolio vs Debito Residuo</div></div>
+          <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-soci-val"></canvas></div></div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-header"><div class="a-card-title">Distribuzione Annua ai Soci</div></div>
+          <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-soci-dist"></canvas></div></div>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-header"><div class="a-card-title">Report Soci — Riepilogo Investimento</div><span class="a-card-ref">PaM · IRR · MOIC</span></div>
+        <div class="a-card-body"><div id="soci-summary"></div></div>
+      </div>
+    </div>
+
+    <div id="aud-bank" class="aud-panel">
+      <div class="kpi-grid-4" id="bank-kpis"></div>
+      <div class="grid-2">
+        <div class="a-card">
+          <div class="a-card-header"><div class="a-card-title">LTV nel Tempo — OMV vs Debito</div></div>
+          <div class="a-card-body"><div class="chart-box" style="height:200px"><canvas id="chart-bank-ltv"></canvas></div></div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-header"><div class="a-card-title">Checklist Istruttoria — Basilea 3</div></div>
+          <div class="a-card-body"><div id="bank-checklist"></div></div>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-header"><div class="a-card-title">Prospetto Rifinanziamento Anno 5 — MLV / OMV / DSCR</div><span class="a-card-ref">Dir. 2006/48/CE</span></div>
+        <div class="a-card-body"><div id="bank-refi"></div></div>
+      </div>
+    </div>
+
+    <div id="aud-method" class="aud-panel">
+      <div id="method-note-content"></div>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT ENGINE
+══════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────
+const VIEWS = ['view-asset','view-income','view-finance','view-valuation','view-rating','view-analysis','view-scenarios','view-reports'];
+const NAV_MAP = { 'view-asset':'nav-asset','view-income':'nav-income','view-finance':'nav-finance','view-valuation':'nav-valuation','view-rating':'nav-rating','view-analysis':'nav-analysis','view-scenarios':'nav-scenarios','view-reports':'nav-reports' };
+
+function showView(id) {
+  VIEWS.forEach(v => { const el = document.getElementById(v); if(el) el.classList.toggle('active', v===id); });
+  Object.entries(NAV_MAP).forEach(([v,n]) => { const el = document.getElementById(n); if(el) el.classList.toggle('active', v===id); });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function toggleCard(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('collapsed');
+}
+
+function switchAud(id, btn) {
+  document.querySelectorAll('.aud-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.aud-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('aud-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ─────────────────────────────────────
+// FORMATTERS — PROFESSIONAL
+// ─────────────────────────────────────
+function fmtK(v) {
+  // Format with thousand separators
+  return new Intl.NumberFormat('en-GB', {maximumFractionDigits:0}).format(Math.round(v));
+}
+function fmtM(v) {
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '−' : '';
+  if(abs >= 1000000) return sign + '£' + (abs/1000000).toFixed(3).replace(/\.?0+$/, '') + 'M';
+  if(abs >= 1000) return sign + '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(abs));
+  return sign + '£' + Math.round(abs);
+}
+function fmtP(v, d=1) { return v.toFixed(d) + '%'; }
+function fmtX(v) { return v.toFixed(2) + 'x'; }
+function fmtPn(v) { return (v>=0?'+':'')+v.toFixed(1)+'%'; }
+function fmtGBP(v) { // Always with thousand separators
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '−' : '';
+  return sign + '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(abs));
+}
+
+const G = id => document.getElementById(id);
+const GV = id => parseFloat(G(id)?.value) || 0;
+const charts = {};
+function dk(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+// ─────────────────────────────────────
+// MATH
+// ─────────────────────────────────────
+function annuity(pv, rMo, nMo) {
+  if(rMo < 0.000001) return pv/nMo;
+  return pv * rMo * Math.pow(1+rMo,nMo) / (Math.pow(1+rMo,nMo)-1);
+}
+function irrBisect(cfs) {
+  let lo=-0.999, hi=20;
+  for(let i=0;i<200;i++){
+    const mid=(lo+hi)/2;
+    const v=cfs.reduce((s,c,j)=>s+c/Math.pow(1+mid,j),0);
+    if(v>0) lo=mid; else hi=mid;
+    if(Math.abs(hi-lo)<1e-9) break;
+  }
+  return (lo+hi)/2;
+}
+
+// ─────────────────────────────────────
+// SCENARIO DEFINITIONS
+// ─────────────────────────────────────
+const SCENS = {
+  base:   { label:'Scenario Base',      dot:'#1A4070', vac:5,   rg:2.0,  ey_d:0.0,  vg:2.0, note:'Assunzioni conservative: vacancy 5%, crescita canoni 2%/anno, exit yield invariato. Scenario di riferimento, proiezione più probabile.' },
+  opt:    { label:'Ottimistico',         dot:'#1E6B3E', vac:2,   rg:3.5,  ey_d:-0.5, vg:3.0, note:'Vacancy quasi zero (locatari istituzionali), crescita canoni accelerata 3.5%/anno, compressione exit yield −50bps. Scenario di ciclo espansivo.' },
+  stress1:{ label:'Stress Moderato',     dot:'#8B5A0A', vac:12,  rg:0.5,  ey_d:1.0,  vg:0.5, note:'Vacancy 12% (perdita 2 unità per 6 mesi), stagnazione canoni +0.5%/anno, exit yield +100bps. Recessione lieve ma realistica.' },
+  stress2:{ label:'Stress Severo',       dot:'#8B2A1E', vac:25,  rg:-1.0, ey_d:2.5,  vg:-1.5,note:'Vacancy 25%, canoni in calo −1%/anno, exit yield +250bps, deprezzamento immobile. Scenario worst-case: l\'investimento rimane solvente?' }
+};
+
+let currentScen = 'base';
+
+// ─────────────────────────────────────
+// CORE ENGINE
+// ─────────────────────────────────────
+function compute(scenKey) {
+  const sc = SCENS[scenKey];
+  // Inputs
+  const P=GV('purchase'), SDLT=GV('sdlt'), DD=GV('dd_costs'), CX=GV('capex');
+  const totalCost=P+SDLT+DD+CX;
+  const LTV1=GV('ltv1')/100, R1=GV('rate1')/100;
+  const DUR1=GV('dur1'), FEE1=GV('fee1')/100;
+  const LTV2=GV('ltv2')/100, R2=GV('rate2')/100, DUR2=GV('dur2');
+  const MLV_D=GV('mlv_disc')/100, VG=sc.vg/100;
+  const DISC=GV('disc_rate')/100;
+  const EY=(GV('exit_yield')+sc.ey_d)/100;
+  const N=GV('horizon');
+  const AMORT=GV('amort_annual');
+  const EXIT_FEE=GV('exit_fee')/100;
+
+  const GR=GV('gross_rent')+GV('bonus_rent');
+  const VAC=sc.vac/100, RG=sc.rg/100;
+  const PM=GV('pm_fee')/100, AM=GV('am_fee')/100;
+  const FIXED=GV('maint_ord')+GV('maint_extra')+GV('insurance')+GV('rates_cost')+GV('licence_cost')+GV('other_costs');
+
+  const debt1=P*LTV1;
+  const upfront1=debt1*FEE1;
+  const equity=totalCost-debt1+upfront1;
+  const ds1=annuity(debt1, R1/12, DUR1*12)*12;
+
+  const yrs=[], nois=[], fcfs=[], pvs=[], grents=[], dservs=[], vacLosses=[], fixedCosts=[];
+  let bal1=debt1, bal2=0, debtBal=debt1;
+  let refiDebt=0, refiDS=0;
+
+  for(let i=0;i<N;i++){
+    const yr=i+1;
+    const gr=GR*Math.pow(1+RG,i);
+    const vacLoss=gr*VAC;
+    const rent=gr-vacLoss;
+    const varCosts=rent*(PM+AM);
+    const totFixed=FIXED;
+    const noi=rent-varCosts-totFixed;
+    let ds;
+    if(yr < DUR1) {
+      ds=ds1; bal1-=AMORT;
+    } else if(yr === DUR1) {
+      const val5=P*Math.pow(1+VG,DUR1);
+      refiDebt=val5*LTV2;
+      bal2=refiDebt;
+      refiDS=annuity(refiDebt, R2/12, DUR2*12)*12;
+      ds=ds1+refiDS; // both in transition year
+      debtBal=refiDebt;
+    } else {
+      ds=refiDS; bal2-=AMORT;
+    }
+    const fcf=noi-ds;
+    const pv=fcf/Math.pow(1+DISC,yr);
+    yrs.push(yr); nois.push(noi); fcfs.push(fcf); pvs.push(pv);
+    grents.push(gr); dservs.push(ds); vacLosses.push(vacLoss);
+    fixedCosts.push(varCosts+totFixed);
+  }
+
+  const exitVal=nois[N-1]/EY*(1-EXIT_FEE);
+  const exitPV=exitVal/Math.pow(1+DISC,N);
+  const npv=pvs.reduce((a,b)=>a+b,0)+exitPV;
+  const allCF=[-equity,...fcfs];
+  allCF[allCF.length-1]+=exitVal;
+  const irrV=irrBisect(allCF);
+  const moic=(fcfs.reduce((a,b)=>a+b,0)+exitVal)/equity;
+  const coc1=fcfs[0]/equity;
+  const dscr1=nois[0]/dservs[0];
+
+  // Valuation methods
+  const NIA=GV('nia'), PSF=GV('mca_psf'), CR=GV('cap_rate')/100;
+  const LAND=GV('land_val'), REB=GV('rebuild_cost'), DEP=GV('deprec')/100;
+  const valMCA=PSF*NIA;
+  const valCap=nois[0]/CR;
+  const valDCF=pvs.reduce((a,b)=>a+b,0)+exitPV+equity;
+  const valCost=LAND+REB*(1-DEP);
+  const omv=valMCA*0.30+valCap*0.35+valDCF*0.35;
+  const mlv=omv*(1-MLV_D);
+
+  // Refinance at Y5
+  const val5=P*Math.pow(1+VG,DUR1);
+  const debtRes=Math.max(0, debt1-AMORT*DUR1);
+  const newDebt=val5*LTV2;
+  const cashRel=Math.max(0, newDebt-debtRes);
+  const dscrRefi=nois[Math.min(DUR1,N)-1]/(annuity(newDebt, R2/12, DUR2*12)*12);
+  const ltvRefi=newDebt/val5;
+  const ltvMLV=newDebt/mlv;
+
+  // PAM
+  const ps=[GV('pam1'),GV('pam2'),GV('pam3'),GV('pam4')];
+  const pw=[0.20,0.30,0.20,0.30];
+  const pamTotal=ps.reduce((s,v,i)=>s+v*pw[i],0);
+  const pamRating=pamTotal>=85?'AAA':pamTotal>=70?'AA':pamTotal>=55?'A':pamTotal>=40?'BBB':pamTotal>=25?'BB':'D';
+
+  return { equity,debt1,totalCost,yrs,nois,fcfs,pvs,grents,dservs,vacLosses,fixedCosts,
+    npv,irrV,moic,coc1,dscr1,exitVal,exitPV,
+    valMCA,valCap,valDCF,valCost,omv,mlv,
+    val5,debtRes,newDebt,cashRel,dscrRefi,ltvRefi,ltvMLV,
+    pamTotal,pamRating, sc };
+}
+
+// ─────────────────────────────────────
+// RENDER ANALYSIS
+// ─────────────────────────────────────
+function renderAnalysis() {
+  const d=compute('base');
+  const DISC=GV('disc_rate');
+  const statusCls=(v,g,w)=>v>=g?'green':v>=w?'amber':'red';
+
+  // KPIs
+  G('an-kpis').innerHTML=[
+    ['IRR Equity',      fmtP(d.irrV*100),  `Hurdle ${fmtP(DISC)}`, statusCls(d.irrV*100, DISC+2, DISC)],
+    ['NPV',             fmtGBP(d.npv),       'Valore attuale netto', d.npv>0?'green':'red'],
+    ['MOIC',            fmtX(d.moic),        `Su equity ${fmtGBP(d.equity)}`, statusCls(d.moic,1.8,1.3)],
+    ['DSCR Anno 1',     fmtX(d.dscr1),       '> 1.25x richiesto', statusCls(d.dscr1,1.25,1.0)],
+  ].map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+
+  // Method strip
+  const maxV=Math.max(d.valMCA,d.valCap,d.valDCF,d.valCost,d.omv);
+  const METHODS=[
+    {icon:'🔍',tag:'mca', label:'MCA',       val:d.valMCA, sub:'£/m² × NIA', bar:'bar-mca'},
+    {icon:'📊',tag:'cap', label:'Cap. Diretta',val:d.valCap,sub:'NOI ÷ cap rate',bar:'bar-cap'},
+    {icon:'📈',tag:'dcf', label:'DCF / Worth',  val:d.valDCF,sub:'Valore investimento',bar:'bar-dcf'},
+    {icon:'🧱',tag:'cost',label:'Metodo Costo',val:d.valCost,sub:'Terreno+Ricostr.',bar:'bar-cost'},
+    {icon:'⚖️',tag:'omv', label:'OMV',          val:d.omv,   sub:'Media pond. IVS',bar:'bar-omv'},
+  ];
+  G('method-strip').innerHTML=METHODS.map(m=>`<div class="method-tile ${m.tag==='omv'?'omv-tile':''}">
+    <div class="mt-icon">${m.icon}</div>
+    <div class="mt-tag ${m.tag}">${m.label}</div>
+    <div class="mt-val">${fmtGBP(m.val)}</div>
+    <div class="mt-sub">${m.sub}</div>
+    <div class="mt-bar-wrap"><div class="mt-bar ${m.bar}" style="width:${(m.val/maxV*100).toFixed(0)}%"></div></div>
+  </div>`).join('');
+
+  // Methods chart
+  dk('chart-methods');
+  charts['chart-methods']=new Chart(G('chart-methods'),{
+    type:'bar',
+    data:{labels:['MCA','Cap. Diretta','DCF/Worth','Costo','OMV'],
+      datasets:[{data:[d.valMCA,d.valCap,d.valDCF,d.valCost,d.omv],
+        backgroundColor:['#1E6B3E','#1A4070','#B8973A','#9E9590','#111111'],
+        borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>'£'+(v/1e6).toFixed(2)+'M',font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}},
+              x:{grid:{display:false}}}}
+  });
+
+  // Divergence text
+  const spread=((Math.max(d.valMCA,d.valCap,d.valDCF)-Math.min(d.valMCA,d.valCap,d.valDCF))/d.omv*100).toFixed(1);
+  const pricePaid=GV('purchase'), marg=((d.omv-pricePaid)/pricePaid*100).toFixed(1);
+  G('divergence-text').innerHTML=`
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--light);margin-bottom:10px">Perché i valori divergono</div>
+    <p style="margin-bottom:8px"><strong>MCA ${fmtGBP(d.valMCA)}</strong> — Prezzo corrente osservato sul mercato aperto. Base empirica.</p>
+    <p style="margin-bottom:8px"><strong>Cap. Diretta ${fmtGBP(d.valCap)}</strong> — NOI corrente capitalizzato al saggio di mercato. Stima statica, assume stabilità perpetua del reddito.</p>
+    <p style="margin-bottom:8px"><strong>DCF/Worth ${fmtGBP(d.valDCF)}</strong> — Valore soggettivo per questo investitore con questo hurdle rate. Considera crescita canoni, rifinanziamento Y5 e exit.</p>
+    <p style="margin-bottom:12px"><strong>Metodo Costo ${fmtGBP(d.valCost)}</strong> — Floor fisico. ${d.valCost<d.valCap?'Inferiore al valore reddituale: l\'immobile vale per il reddito prodotto, non per la struttura.':'Superiore al valore reddituale: segnala investimento in costruzione sovradimensionato.'}</p>
+    <div style="padding:10px;background:var(--surface-2);border-radius:5px;font-size:11px;color:var(--mid)">
+      Spread tra metodi: <strong>${spread}%</strong> — ${parseFloat(spread)<10?'Convergenza soddisfacente':'Divergenza elevata: investigare'}<br>
+      OMV vs prezzo pagato: <strong>${marg>0?'+':''}${marg}%</strong> — ${parseFloat(marg)>5?'Acquisizione a sconto ✓':parseFloat(marg)>-5?'Prezzo equo di mercato':'Premio: richiede crescita futura'}
+    </div>`;
+
+  // DCF KPIs
+  G('dcf-kpis').innerHTML=[
+    ['Equity totale',   fmtGBP(d.equity),    '',''],
+    ['Exit value',      fmtGBP(d.exitVal),   'NOI/exit yield · netto fees','gold'],
+    ['Cash-on-Cash Y1', fmtP(d.coc1*100),   'FCF/equity anno 1',d.coc1>0.04?'green':'amber'],
+    ['NPV totale',      fmtGBP(d.npv),       'Incl. exit PV', d.npv>0?'green':'red'],
+  ].map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+
+  // DCF table
+  let npvCum=-d.equity;
+  G('dcf-tbody').innerHTML=d.yrs.map((yr,i)=>{
+    npvCum+=d.pvs[i];
+    const isRefi=yr===GV('dur1');
+    const fcf=d.fcfs[i]; const noi=d.nois[i];
+    return `<tr ${isRefi?'class="highlight-row"':''}>
+      <td><strong>Y${yr}</strong>${isRefi?' <span class="inline-ref">Refi</span>':''}</td>
+      <td>${fmtGBP(d.grents[i])}</td>
+      <td class="td-neg">${fmtGBP(-d.vacLosses[i])}</td>
+      <td>${fmtGBP(d.grents[i]-d.vacLosses[i])}</td>
+      <td class="td-neg">${fmtGBP(-d.fixedCosts[i])}</td>
+      <td><strong>${fmtGBP(noi)}</strong></td>
+      <td class="td-neg">${fmtGBP(-d.dservs[i])}</td>
+      <td class="${fcf>=0?'td-pos':'td-neg'}">${fmtGBP(fcf)}${i===d.yrs.length-1?'<br><small style="font-size:10px;color:var(--mid)">+'+fmtGBP(d.exitVal)+' exit</small>':''}</td>
+      <td class="td-label">${fmtGBP(d.pvs[i])}</td>
+      <td class="${npvCum>=0?'td-pos':'td-neg'}">${fmtGBP(npvCum)}</td>
+    </tr>`;
+  }).join('');
+
+  // CF Chart
+  dk('chart-cf');
+  charts['chart-cf']=new Chart(G('chart-cf'),{
+    type:'bar',
+    data:{labels:d.yrs.map(y=>'Y'+y),datasets:[
+      {label:'NOI',data:d.nois,backgroundColor:'#1E6B3E',borderRadius:3},
+      {label:'FCF Equity',data:d.fcfs,backgroundColor:'#B8973A',borderRadius:3},
+      {label:'Debt service',data:d.dservs.map(v=>-v),backgroundColor:'rgba(139,42,30,0.5)',borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10}}}},
+      scales:{y:{ticks:{callback:v=>'£'+Math.round(v/1000)+'k',font:{size:9}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  // NPV chart
+  dk('chart-npv');
+  const npvArr=[]; let nc=-d.equity;
+  d.pvs.forEach(p=>{nc+=p;npvArr.push(nc);});
+  charts['chart-npv']=new Chart(G('chart-npv'),{
+    type:'line',
+    data:{labels:d.yrs.map(y=>'Y'+y),datasets:[
+      {data:npvArr,borderColor:'#B8973A',backgroundColor:'rgba(184,151,58,0.08)',fill:true,tension:0.35,borderWidth:2,pointRadius:3},
+      {data:d.yrs.map(()=>0),borderColor:'rgba(0,0,0,0.15)',borderDash:[4,3],borderWidth:1,pointRadius:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>'£'+Math.round(v/1000)+'k',font:{size:9}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  // Reconciliation
+  G('recon-kpis').innerHTML=[
+    ['OMV — Valore di Mercato', fmtGBP(d.omv), 'Media pond. IVS (30/35/35)', 'gold'],
+    ['MLV — Mortgage Lending Value', fmtGBP(d.mlv), 'Sconto '+(GV('mlv_disc'))+'% su OMV — Basilea 3', ''],
+    ['Worth — Valore Investimento', fmtGBP(d.valDCF), 'DCF con saggio investitore', 'green'],
+  ].map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="kpi-label">${l}</div><div class="kpi-value" style="font-size:20px">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+
+  G('recon-table').innerHTML=`<table class="data-table">
+    <thead><tr><th>Metodo</th><th>Valore stimato</th><th>Peso IVS</th><th>Contributo</th><th>Standard</th><th>Uso primario</th></tr></thead>
+    <tbody>
+      <tr><td>MCA — Confronto di mercato</td><td>${fmtGBP(d.valMCA)}</td><td>30%</td><td>${fmtGBP(d.valMCA*0.30)}</td><td><span class="inline-ref">IVS Cap.8</span></td><td>Verifica prezzo di mercato</td></tr>
+      <tr><td>Capitalizzazione diretta</td><td>${fmtGBP(d.valCap)}</td><td>35%</td><td>${fmtGBP(d.valCap*0.35)}</td><td><span class="inline-ref">IVS Cap.9</span></td><td>Valore reddituale stabile</td></tr>
+      <tr><td>DCF — Yield capitalization</td><td>${fmtGBP(d.valDCF)}</td><td>35%</td><td>${fmtGBP(d.valDCF*0.35)}</td><td><span class="inline-ref">IVS §2/§3.3</span></td><td>Valore di investimento</td></tr>
+      <tr><td>Metodo del costo</td><td>${fmtGBP(d.valCost)}</td><td>— verifica</td><td>—</td><td><span class="inline-ref">IVS Cap.10</span></td><td>Floor fisico / assicurativo</td></tr>
+      <tr class="total-row"><td>OMV riconciliato</td><td>${fmtGBP(d.omv)}</td><td>100%</td><td>${fmtGBP(d.omv)}</td><td><span class="inline-ref">IVS §1</span></td><td>Valore di mercato ufficiale</td></tr>
+    </tbody></table>`;
+}
+
+// ─────────────────────────────────────
+// RENDER SCENARIOS
+// ─────────────────────────────────────
+function renderScenarios() {
+  const sc=SCENS[currentScen];
+  const d=compute(currentScen);
+  const DISC=GV('disc_rate');
+  G('hurdle-display').textContent=fmtP(DISC);
+
+  // Scenario selector
+  G('scen-selector').innerHTML=Object.entries(SCENS).map(([k,s])=>{
+    const dd=compute(k);
+    return `<div class="scen-opt ${k===currentScen?'active':''} s-${k==='base'?'base':k==='opt'?'opt':k==='stress1'?'mid':'bad'}" onclick="currentScen='${k}';renderScenarios()">
+      <div class="so-name"><span class="so-dot" style="background:${s.dot}"></span>${s.label}</div>
+      <div class="so-kpis">
+        <span class="so-kpi">IRR <strong>${fmtP(dd.irrV*100)}</strong></span>
+        <span class="so-kpi">MOIC <strong>${fmtX(dd.moic)}</strong></span>
+        <span class="so-kpi">DSCR <strong>${fmtX(dd.dscr1)}</strong></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const statusCls=(v,g,w)=>v>=g?'green':v>=w?'amber':'red';
+  G('scen-kpis').innerHTML=[
+    ['IRR Equity',   fmtP(d.irrV*100),  sc.label, statusCls(d.irrV*100,DISC+2,DISC)],
+    ['NPV',          fmtGBP(d.npv),      'Valore attuale netto', d.npv>0?'green':'red'],
+    ['MOIC',         fmtX(d.moic),       'Multiplo equity', statusCls(d.moic,1.8,1.3)],
+    ['DSCR',         fmtX(d.dscr1),      'Copertura debito Y1', statusCls(d.dscr1,1.25,1.0)],
+  ].map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+
+  G('scen-notes').innerHTML=`<p style="margin-bottom:10px"><strong style="color:var(--ink)">${sc.label}</strong></p>
+    <p style="margin-bottom:8px">Vacancy: <strong>${sc.vac}%</strong> · Crescita canoni: <strong>${sc.rg}%/anno</strong></p>
+    <p style="margin-bottom:8px">Exit yield: <strong>${(GV('exit_yield')+sc.ey_d).toFixed(1)}%</strong> (Δ ${sc.ey_d>=0?'+':''}${sc.ey_d}%) · Val. apprezzamento: <strong>${sc.vg}%/anno</strong></p>
+    <div style="margin-top:12px;padding:10px;background:var(--surface-2);border-radius:5px;font-size:11px;color:var(--mid)">${sc.note}</div>`;
+
+  // IRR chart all scenarios
+  dk('chart-scen-irr');
+  const scKeys=Object.keys(SCENS);
+  charts['chart-scen-irr']=new Chart(G('chart-scen-irr'),{
+    type:'bar',
+    data:{labels:scKeys.map(k=>SCENS[k].label),
+      datasets:[
+        {data:scKeys.map(k=>compute(k).irrV*100),backgroundColor:scKeys.map(k=>SCENS[k].dot),borderRadius:4},
+        {type:'line',data:scKeys.map(()=>DISC),borderColor:'#B8973A',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  // Sensitivity table
+  const EYS=[7,8,9,10,11,12], RGS=[-1,0,1,2,3,4];
+  const P=GV('purchase'),SDLT=GV('sdlt'),DD=GV('dd_costs'),CX=GV('capex');
+  const totC=P+SDLT+DD+CX,LTV1=GV('ltv1')/100,R1=GV('rate1')/100,DUR1=GV('dur1');
+  const PM=GV('pm_fee')/100,AM=GV('am_fee')/100,FIXED=GV('maint_ord')+GV('maint_extra')+GV('insurance')+GV('rates_cost')+GV('licence_cost')+GV('other_costs');
+  const GR=GV('gross_rent')+GV('bonus_rent'),VAC=sc.vac/100,N=GV('horizon'),DISC2=GV('disc_rate')/100;
+  const debt1_=P*LTV1,eq_=totC-debt1_;
+  const ds1_=annuity(debt1_,R1/12,DUR1*12)*12;
+
+  let tbl=`<table class="sens-table"><thead><tr><th class="sens-row-label">Crescita ↓ / Exit yield →</th>${EYS.map(e=>`<th>${e}.0%</th>`).join('')}</tr></thead><tbody>`;
+  RGS.forEach(rg=>{
+    tbl+=`<tr><td class="sens-row-label">${rg>=0?'+':''}${rg}.0%/anno</td>`;
+    EYS.forEach(ey=>{
+      const fcfs2=[],nois2=[];
+      for(let i=0;i<N;i++){
+        const gr=GR*Math.pow(1+rg/100,i);
+        const noi=gr*(1-VAC)*(1-PM-AM)-FIXED;
+        const ds=i<DUR1?ds1_:ds1_*0.9;
+        nois2.push(noi);fcfs2.push(noi-ds);
+      }
+      const exV=nois2[N-1]/(ey/100);
+      const irrS=irrBisect([-eq_,...fcfs2,fcfs2[N-1]+exV])*100;
+      const cls=irrS>=DISC+2?'sens-cell-green':irrS>=DISC?'sens-cell-amber':'sens-cell-red';
+      const isCurrent=(Math.abs(ey-GV('exit_yield'))<0.6&&Math.abs(rg-sc.rg)<0.6);
+      tbl+=`<td class="${cls}" ${isCurrent?'style="outline:2px solid var(--gold);outline-offset:-2px"':''}>${fmtP(irrS)}</td>`;
+    });
+    tbl+='</tr>';
+  });
+  tbl+=`</tbody></table>`;
+  G('sens-table-wrap').innerHTML=tbl;
+
+  // Stress vars table
+  const dBase=compute('base'), dWorst=compute('stress2');
+  const stressVars=[
+    ['Vacancy +20pp (5%→25%)', dBase.irrV*100, dWorst.irrV*100, 'Perdita locatari'],
+    ['Exit yield +250bps', dBase.irrV*100, compute('stress2').irrV*100, 'Ampliamento spread'],
+    ['Canoni −1%/anno', dBase.irrV*100, dWorst.irrV*100, 'Deflazione canoni'],
+    ['Tasso +200bps (sensitività)', dBase.irrV*100, dBase.irrV*100*0.72, 'Rischio tasso'],
+  ];
+  G('stress-vars-table').innerHTML=`<table class="data-table">
+    <thead><tr><th>Variabile di rischio</th><th>IRR base</th><th>IRR stress</th><th>Δ IRR</th><th>Contesto</th><th>Severità</th></tr></thead>
+    <tbody>${stressVars.map(([n,b,w,ctx])=>{
+      const delta=w-b; const cls=delta>-2?'td-pos':delta>-5?'':' class="td-neg"';
+      return `<tr><td>${n}</td><td class="td-pos">${fmtP(b)}</td><td class="${w<GV('disc_rate')?'td-neg':'td-pos'}">${fmtP(w)}</td><td class="${delta<-5?'td-neg':''}">${delta.toFixed(1)}pp</td><td class="td-label">${ctx}</td><td><span class="inline-ref" style="background:${delta<-5?'var(--red-bg)':delta<-2?'var(--amber-bg)':'var(--green-bg)'};color:${delta<-5?'var(--red)':delta<-2?'var(--amber)':'var(--green)'}">${delta<-5?'Alta':delta<-2?'Media':'Bassa'}</span></td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+// ─────────────────────────────────────
+// RENDER REPORTS
+// ─────────────────────────────────────
+function renderReports() {
+  const d=compute('base'); const DISC=GV('disc_rate');
+  const gilt=GV('gilt'), cb=GV('corp_bond'), eq=GV('eq_mkt'), inf=GV('inflation');
+  const statusCls=(v,g,w)=>v>=g?'green':v>=w?'amber':'red';
+
+  // INVESTOR
+  G('inv-kpis').innerHTML=[
+    ['IRR Equity', fmtP(d.irrV*100), `Hurdle ${fmtP(DISC)}`, statusCls(d.irrV*100,DISC+2,DISC)],
+    ['MOIC', fmtX(d.moic), `Su ${fmtGBP(d.equity)}`, statusCls(d.moic,1.8,1.3)],
+    ['Premio vs Gilt', '+'+fmtP(d.irrV*100-gilt), 'Spread sul risk-free', 'green'],
+    ['Rendimento reale', '+'+fmtP(d.irrV*100-inf), 'Sopra inflazione', 'green'],
+  ].map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+
+  dk('chart-alt');
+  charts['chart-alt']=new Chart(G('chart-alt'),{
+    type:'bar',
+    data:{labels:['Gilt 10Y','Corp Bond IG','Azionario','Immobiliare (IRR)'],
+      datasets:[{data:[gilt,cb,eq,d.irrV*100],
+        backgroundColor:['#9E9590','#9E9590','#9E9590','#B8973A'],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  G('inv-thesis').innerHTML=`
+    <p style="margin-bottom:10px"><strong>La leva amplifica il rendimento equity.</strong> Con LTV ${GV('ltv1')}%, ogni 1% di apprezzamento del portfolio vale ${(1/(1-GV('ltv1')/100)).toFixed(1)}% sull'equity. Il valore trasforma un asset return del 2–3% in un IRR equity del ${fmtP(d.irrV*100)}.</p>
+    <p style="margin-bottom:10px"><strong>La banca come validatore implicito.</strong> Il finanziatore ha già fatto la propria due diligence e ha prestato ${fmtGBP(d.debt1)} a ${GV('rate1')}% su questo asset. Ciò conferma la solidità della garanzia sottostante.</p>
+    <p><strong>Il rifinanziamento a 5 anni</strong> prevede una distribuzione straordinaria di ${fmtGBP(d.cashRel)} ai soci senza vendere l'asset — un meccanismo non disponibile in nessuno strumento di reddito fisso alternativo.</p>`;
+
+  dk('chart-inv-timeline');
+  let cum=0; const cumArr=[];
+  d.fcfs.forEach((f,i)=>{cum+=Math.max(0,f);if(i===d.yrs.length-1)cum+=d.exitVal;cumArr.push(cum);});
+  charts['chart-inv-timeline']=new Chart(G('chart-inv-timeline'),{
+    type:'line',
+    data:{labels:d.yrs.map(y=>'Y'+y),datasets:[
+      {label:'Rendimento cumulato',data:cumArr,borderColor:'#B8973A',backgroundColor:'rgba(184,151,58,0.1)',fill:true,tension:0.35,borderWidth:2,pointRadius:3},
+      {label:'Equity investita',data:d.yrs.map(()=>d.equity),borderColor:'#9E9590',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10}}}},
+      scales:{y:{ticks:{callback:v=>'£'+Math.round(v/1000)+'k',font:{size:9}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  // SOCI
+  G('soci-kpis').innerHTML=[
+    ['Distribuzione Y1', fmtGBP(Math.max(0,d.fcfs[0])*0.85), '85% del FCF equity', 'green'],
+    ['Valore a 5 anni', fmtGBP(d.val5), `+${fmtP((d.val5/GV('purchase')-1)*100)}`, 'green'],
+    ['Cash liberato (refi)', fmtGBP(d.cashRel), 'Distribuzione straordinaria Y5', 'green'],
+    ['Rating PaM', d.pamRating, `Score ${d.pamTotal.toFixed(0)}/100`, d.pamTotal>=70?'green':'amber'],
+  ].map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+
+  dk('chart-soci-val');
+  const valArr=d.yrs.map(y=>GV('purchase')*Math.pow(1+GV('val_growth')/100,y));
+  const debtArr=d.yrs.map(y=>Math.max(0,d.debt1-GV('amort_annual')*Math.min(y,GV('dur1'))));
+  charts['chart-soci-val']=new Chart(G('chart-soci-val'),{
+    type:'line',
+    data:{labels:d.yrs.map(y=>'Y'+y),datasets:[
+      {label:'Valore portfolio',data:valArr,borderColor:'#1E6B3E',backgroundColor:'rgba(30,107,62,0.08)',fill:true,tension:0.35,borderWidth:2,pointRadius:3},
+      {label:'Debito residuo',data:debtArr,borderColor:'#8B2A1E',borderDash:[5,4],borderWidth:1.5,tension:0.3,pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10}}}},
+      scales:{y:{ticks:{callback:v=>'£'+Math.round(v/1000)+'k',font:{size:9}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  dk('chart-soci-dist');
+  charts['chart-soci-dist']=new Chart(G('chart-soci-dist'),{
+    type:'bar',
+    data:{labels:d.yrs.map(y=>'Y'+y),
+      datasets:[{data:d.fcfs.map(f=>Math.max(0,f)*0.85),backgroundColor:'#B8973A',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>'£'+Math.round(v/1000)+'k',font:{size:9}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  G('soci-summary').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;font-size:12px">
+      ${[
+        ['Asset',G('asset_name').value+', '+G('city').value],
+        ['Acquisizione',G('acq_date').value+' — '+fmtGBP(GV('purchase'))],
+        ['OMV corrente',fmtGBP(d.omv)],['MLV (Basilea)',fmtGBP(d.mlv)],
+        ['Canone lordo/anno',fmtGBP(GV('gross_rent'))],['NOI anno 1',fmtGBP(d.nois[0])],
+        ['IRR levered',fmtP(d.irrV*100)],['MOIC',fmtX(d.moic)],
+        ['Rating PaM TEGOVA',d.pamRating+' ('+d.pamTotal.toFixed(0)+'/100)'],['Exit value',fmtGBP(d.exitVal)],
+      ].map(([k,v])=>`<div style="padding:9px 14px;border-bottom:1px solid var(--border)"><span style="color:var(--light);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">${k}</span><br><strong style="font-size:13px">${v}</strong></div>`).join('')}
+    </div>`;
+
+  // BANCA
+  G('bank-kpis').innerHTML=[
+    ['LTV su OMV', fmtP(d.ltvRefi*100), '< 65% richiesto', d.ltvRefi<0.65?'green':'red'],
+    ['LTV su MLV', fmtP(d.ltvMLV*100), '< 80% Basilea 3', d.ltvMLV<0.80?'green':'red'],
+    ['DSCR (refi)', fmtX(d.dscrRefi), '> '+GV('dscr_min')+'x', d.dscrRefi>GV('dscr_min')?'green':'red'],
+    ['MLV — garanzia', fmtGBP(d.mlv), 'Valore prudenziale', ''],
+  ].map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+
+  dk('chart-bank-ltv');
+  const ltvArr=d.yrs.map(y=>{
+    const v=GV('purchase')*Math.pow(1+GV('val_growth')/100,y);
+    const dbt=Math.max(0,d.debt1-GV('amort_annual')*Math.min(y,GV('dur1')));
+    return (dbt/v*100).toFixed(1);
+  });
+  charts['chart-bank-ltv']=new Chart(G('chart-bank-ltv'),{
+    type:'line',
+    data:{labels:d.yrs.map(y=>'Y'+y),datasets:[
+      {label:'LTV %',data:ltvArr,borderColor:'#1A4070',backgroundColor:'rgba(26,64,112,0.08)',fill:true,tension:0.35,borderWidth:2,pointRadius:3},
+      {label:'Soglia 65%',data:d.yrs.map(()=>65),borderColor:'#B8973A',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false},
+      {label:'Soglia 80% MLV',data:d.yrs.map(()=>80),borderColor:'rgba(139,42,30,0.4)',borderDash:[3,3],borderWidth:1,pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10}}}},
+      scales:{y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}
+  });
+
+  const checks=[
+    ['OMV al momento refi (Y5)', fmtGBP(d.val5), 'Perizia indipendente', 'info'],
+    ['MLV (−'+GV('mlv_disc')+'% su OMV)', fmtGBP(d.mlv), 'Dir. UE 2006/48/CE', 'info'],
+    ['Debito residuo', fmtGBP(d.debtRes), 'Dopo '+GV('dur1')+'a ammort.', 'info'],
+    ['LTV su OMV', fmtP(d.ltvRefi*100), '< 65%', d.ltvRefi<0.65?'ok':'warn'],
+    ['LTV su MLV (Basilea 3)', fmtP(d.ltvMLV*100), '< 80%', d.ltvMLV<0.80?'ok':'warn'],
+    ['DSCR', fmtX(d.dscrRefi), '> '+GV('dscr_min')+'x', d.dscrRefi>GV('dscr_min')?'ok':'warn'],
+    ['Track record documentato', '5 anni', 'Report soci allegati', 'ok'],
+    ['Rating PaM TEGOVA', d.pamRating+' ('+d.pamTotal.toFixed(0)+'/100)', '≥ BBB', d.pamTotal>=40?'ok':'warn'],
+  ];
+  G('bank-checklist').innerHTML=checks.map(([l,v,t,status])=>`
+    <div class="checklist-row">
+      <div><div class="cl-label">${l}</div><div style="font-size:10px;color:var(--light)">${t}</div></div>
+      <div style="text-align:right"><span class="cl-val">${v}</span><span class="cl-badge cl-${status}">${status==='ok'?'OK':status==='warn'?'Verifica':status==='info'?'Info':'!'}</span></div>
+    </div>`).join('');
+
+  G('bank-refi').innerHTML=`<table class="data-table">
+    <thead><tr><th>Voce</th><th>Valore</th><th>Benchmark banca</th><th>Esito</th></tr></thead>
+    <tbody>
+      <tr><td>Valore mercato OMV (Y5)</td><td>${fmtGBP(d.val5)}</td><td>Perizia indipendente</td><td><span class="cl-badge cl-info">Info</span></td></tr>
+      <tr><td>MLV (Mortgage Lending Value)</td><td>${fmtGBP(d.mlv)}</td><td>Sconto ${GV('mlv_disc')}% su OMV</td><td><span class="cl-badge cl-ok">OK</span></td></tr>
+      <tr><td>Debito residuo mutuo originario</td><td>${fmtGBP(d.debtRes)}</td><td>Dopo ${GV('dur1')} anni ammortamento</td><td><span class="cl-badge cl-info">Info</span></td></tr>
+      <tr><td>Nuovo prestito richiesto</td><td>${fmtGBP(d.newDebt)}</td><td>LTV ${GV('ltv2')}% su OMV</td><td><span class="cl-badge ${d.ltvRefi<0.65?'cl-ok':'cl-warn'}">${d.ltvRefi<0.65?'OK':'!'}</span></td></tr>
+      <tr><td>LTV su MLV (Basilea 3)</td><td>${fmtP(d.ltvMLV*100)}</td><td>< 80%</td><td><span class="cl-badge ${d.ltvMLV<0.80?'cl-ok':'cl-warn'}">${d.ltvMLV<0.80?'OK':'!'}</span></td></tr>
+      <tr><td>NOI anno 5</td><td>${fmtGBP(d.nois[Math.min(GV('dur1'),GV('horizon'))-1])}</td><td>> rata annua</td><td><span class="cl-badge cl-ok">OK</span></td></tr>
+      <tr><td>DSCR</td><td>${fmtX(d.dscrRefi)}</td><td>> ${GV('dscr_min')}x</td><td><span class="cl-badge ${d.dscrRefi>GV('dscr_min')?'cl-ok':'cl-warn'}">${d.dscrRefi>GV('dscr_min')?'OK':'!'}</span></td></tr>
+      <tr class="total-row"><td>Liquidità liberata ai soci</td><td>${fmtGBP(d.cashRel)}</td><td>Distribuzione straordinaria Y5</td><td><span class="cl-badge cl-info">Info</span></td></tr>
+    </tbody></table>`;
+
+  // METHODOLOGY NOTE
+  G('method-note-content').innerHTML=`
+    <div class="a-card"><div class="a-card-header"><div class="a-card-title">Nota Metodologica — Standard di Riferimento</div><span class="a-card-ref">IVS 2022 · RICS · Codice Val. Imm. IV</span></div>
+    <div class="a-card-body" style="font-size:13px;line-height:1.8;color:var(--ink-2)">
+      <p style="margin-bottom:14px">Secondo il Codice delle Valutazioni Immobiliari IV (§4.11) e gli International Valuation Standards, il rapporto di valutazione deve esporre i risultati di più procedimenti. La <strong>divergenza tra metodi è informativa</strong>, non un errore: indica dove il mercato, il reddito e le aspettative dell'investitore divergono.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <p style="font-weight:600;margin-bottom:6px"><span class="inline-ref">IVS Cap.8</span> MCA — Market Comparison Approach</p>
+          <p style="margin-bottom:14px;color:var(--mid)">Comparazione sistematica con ≥3 transazioni reali. Formula: V = P̄/m² × NIA. Risponde a: "a quanto vendono immobili simili oggi?"</p>
+          <p style="font-weight:600;margin-bottom:6px"><span class="inline-ref">IVS Cap.9</span> Capitalizzazione Diretta</p>
+          <p style="margin-bottom:14px;color:var(--mid)">NOI corrente capitalizzato al saggio di mercato. Formula: V = NOI ÷ R. Assume stabilità del reddito. Risponde a: "quanto vale questo reddito perpetuo?"</p>
+        </div>
+        <div>
+          <p style="font-weight:600;margin-bottom:6px"><span class="inline-ref">IVS §2/§3.3</span> DCF — Discounted Cash Flow</p>
+          <p style="margin-bottom:14px;color:var(--mid)">Proiezione anno per anno attualizzata al saggio investitore. Produce il <em>Valore di Investimento (Worth)</em>, non l'OMV. Risponde a: "quanto vale questa sequenza specifica di flussi per me?"</p>
+          <p style="font-weight:600;margin-bottom:6px"><span class="inline-ref">IVS Cap.10</span> Metodo del Costo</p>
+          <p style="color:var(--mid)">Terreno + costo ricostruzione − deprezzamento. Floor fisico del valore. Usato per assicurazioni e immobili speciali. Risponde a: "quanto costerebbe ricostruirlo?"</p>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:14px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--mid)">
+        <strong style="color:var(--ink)">Tre valori, tre domande diverse:</strong> OMV (prezzo di mercato ordinario) · MLV (valore cauzionale prudenziale per la banca, Dir. 2006/48/CE) · Worth (valore di investimento soggettivo per questo investitore specifico, IVS 2 §3.3).
+      </div>
+    </div></div>`;
+}
+
+// ─────────────────────────────────────
+// PAM LIVE
+// ─────────────────────────────────────
+function liveUpdatePAM() {
+  const s=[GV('pam1'),GV('pam2'),GV('pam3'),GV('pam4')];
+  const w=[0.20,0.30,0.20,0.30];
+  const total=s.reduce((a,v,i)=>a+v*w[i],0);
+  const rating=total>=85?'AAA':total>=70?'AA':total>=55?'A':total>=40?'BBB':total>=25?'BB':'D';
+  const rCls=total>=70?'rating-aaa':total>=55?'rating-a':total>=40?'rating-bbb':'rating-d';
+  const labels=['Mercato riferimento (20%)','Localizzazione (30%)','Caratteristiche immobile (20%)','Qualità flusso di cassa (30%)'];
+  G('pam-live-result').innerHTML=labels.map((l,i)=>`
+    <div class="pam-row">
+      <div class="pam-label">${l}</div>
+      <div class="pam-track"><div class="pam-fill" style="width:${s[i]}%"></div></div>
+      <div class="pam-score">${Math.round(s[i])}</div>
+    </div>`).join('')+
+    `<div class="pam-result">
+      <div class="pam-total">${total.toFixed(1)}<span style="font-size:14px;color:var(--light)">/100</span></div>
+      <div class="pam-rating ${rCls}">${rating}</div>
+      <div style="font-size:10px;color:var(--light);margin-top:6px">Property &amp; Market Rating — TEGOVA · Codice Val. Imm. IV Cap. 20</div>
+    </div>`;
+}
+
+// ─────────────────────────────────────
+// MASTER RUN
+// ─────────────────────────────────────
+function runAll() {
+  renderAnalysis();
+  renderScenarios();
+  renderReports();
+}
+
+// ─────────────────────────────────────
+// INIT
+// ─────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  liveUpdatePAM();
+  // Auto-calc efficiency
+  const niaEl=G('nia'), giaEl=G('gia'), effEl=G('efficiency');
+  if(niaEl&&giaEl&&effEl){
+    const upd=()=>{const n=parseFloat(niaEl.value)||1,g=parseFloat(giaEl.value)||1;effEl.value=Math.round(n/g*100);};
+    niaEl.addEventListener('input',upd); giaEl.addEventListener('input',upd);
+  }
+});
+</script>
+</body>
+</html>
